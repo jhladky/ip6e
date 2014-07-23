@@ -1,0 +1,7 @@
+# AVR Object files
+*.elf
+*.hex
+
+
+# C Object files
+*.o
