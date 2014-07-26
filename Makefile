@@ -1,8 +1,17 @@
+# ip6e Makefile
+
+CC=avr-gcc
+CFLAGS=-mmcu=atmega644 -DF_CPU=20000000 -Os -std=c99
+OBJS=lcd.o
+
 # Compile
-tube: main.c
-	avr-gcc -mmcu=atmega644 -DF_CPU=16000000 -Os -std=c99 -o main.elf main.c
+tube: main.o $(OBJS)
+	$(CC) $(CFLAGS) -o main.elf main.o $(OBJS)
 	avr-objcopy -O ihex main.elf main.hex
 	avr-size main.elf
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # Flash
 flash: main.hex
