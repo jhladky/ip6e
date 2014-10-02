@@ -1,0 +1,28 @@
+The Plan
+
+1. Develop interface with ATMega chip
+2. Develop test harness for Layers 3-4 of the stack
+3. Develop Layers 3-4
+4. Reintegrate Layers-3-4 code with interface to chip code
+5. Combine everything into ip6e library
+
+Fall Quarter: Steps 2-4
+Winter Quarter: Steps 1 & 5
+
+* We need to write the functions that process the bits and functions that test that processing
+* Try to look at fishnet for inspiration but don't copy it
+* Remember we are conforming to the IPv6 standard and we are focusing in embedded
+* Keep it in C, keep it fast, design the test harness to the code can be optimized.
+* Testing is absolutely crucial here, it's going to be extremely difficult to test on the ATMega
+
+Chip Functions
+==============
+* L2_rx
+* L2_tx
+
+Testable Functions
+==================
+* L3_rx
+* L3_tx
+* L4_rx
+* L4_tx
