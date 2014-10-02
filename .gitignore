@@ -5,3 +5,6 @@
 
 # C Object files
 *.o
+
+# Test binaries
+ip6e_test
