@@ -1,11 +1,11 @@
 # ip6e layer 3 & test harness Makefile
 
 CC=gcc
-CFLAGS= -Wall -Wextra -pedantic -std=c99 -D_POSIX_SOURCE
-OBJS=l3.o
+CFLAGS= -Wall -Wextra -Wno-unused-parameter -pedantic -std=c99 -D_POSIX_SOURCE
+# OBJS=l3.o
 
-ip6e_test: test.o $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $< $(OBJS)
+ip6e_test: test.o
+	$(CC) $(CFLAGS) -o $@ $<
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
