@@ -11,54 +11,95 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <net/if.h>
 #include <linux/if.h>
 #include <linux/if_tun.h>
 #include <linux/if_packet.h>
+#include <arpa/inet.h>
+
 #include "test.h"
 
 /* 
  * We need these as global so we can close them properly when we terminate.
  */
-static int tap, packetSock, rawSock;
+static int tap, packetSock;
 
 int main() {
+   const char* tapName = "ip6e";
    struct ifreq ifr;
-   int err, bytesRead;
+   //struct sockaddr_in* tapAddr = (struct sockaddr_in *) &ifr.ifr_addr;
+   struct sockaddr_ll sa;
+   int err, bytesRead, ifNdx;
    uint8_t buf[BUF_SIZE];
 
    add_handler(SIGINT, clean_exit);
-
-   /* /dev/net/tun is known as the 'clone device'. Although we
+   fprintf(stderr, "Open tap device ");
+   /*
+    * /dev/net/tun is known as the 'clone device'. Although we
     * receive a file descriptor from it, we can't use it until
     * we make the ioctl call.
     */
    if ((tap = open("/dev/net/tun", O_RDWR)) == -1) {
-      perror("Failed to open tap device");
+      perror("Opening tap fd failed");
       abort();
    }
 
-   /* When we make the ioctl call, this will
+   /*
+    * When we make the ioctl call, this will
     * make a TAP device, and call it `ip6e`.
     * IFF_NO_PI removes a byte the kernel insert before all packets,
     * giving us the "pure" packet.
     */
    memset(&ifr, 0, sizeof(struct ifreq));
    ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-   strncpy(ifr.ifr_name, "ip6e", IFNAMSIZ);
+   strncpy(ifr.ifr_name, tapName, IFNAMSIZ);
 
-   // The iocal call with the magical TUNSETIFF flag
+   // The ioctl call with the magical TUNSETIFF flag
    if ((err = ioctl(tap, TUNSETIFF, (void *) &ifr)) == -1) {
       close(tap);
-      perror("Failed to configure tap device");
+      perror("Tap initialization failed");
+      abort();
+   }
+   
+   /*
+    * Two `system` calls that set up the ip6e link. Replaces using
+    * ioctl
+    */
+   if ((err = system("/sbin/ip link set ip6e up")) == -1) {
+      close(tap);
+      perror("Tap network configuration failed");
       abort();
    }
 
-   printf("(1) Open tap device\n");
+   if ((err = system("/sbin/ip address add dev ip6e 10.100.200.1/24")) == -1) {
+      close(tap);
+      perror("Tap network configuration failed");
+      abort();
+   }
 
-   packetSock = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL));
-   rawSock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
+   printDone();
+   fprintf(stderr, "Open packet socket ");
 
-   printf("(2) Open sockets\n");
+   memset(&sa, 0, sizeof(struct sockaddr_ll));
+   if ((ifNdx = if_nametoindex("ip6e")) == 0) {
+      close(tap);
+      perror("Get tap device index failed");
+      abort();
+   }
+   sa.sll_family = PF_PACKET;
+   sa.sll_protocol = htons(ETH_P_ALL);
+   sa.sll_ifindex = if_nametoindex("ip6e");
+   packetSock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+   
+   if ((err = bind(packetSock, (struct sockaddr *) &sa, sizeof(struct sockaddr_ll))) < 0) {
+      close(tap);
+      close(packetSock);
+      perror("Bind to tap interface failed");
+      abort();
+   }
+
+   printDone();
+   printf("Ready.\n");
 
    while (true) {
 
@@ -75,21 +116,13 @@ int main() {
          close(packetSock);
          abort();
       }
-
-      printf("Read %d bytes from packet socket\n", bytesRead);
-      if ((bytesRead = read(rawSock, buf, BUF_SIZE)) < 0) {
-         perror("Error reading from socket");
-         close(rawSock);
-         abort();
-      }
-      printf("Read %d bytes from raw socket\n", bytesRead);
-      ip_parse(buf, NULL);
+      printf("\nRead %d bytes from packet socket\n", bytesRead);
+      eth_parse(buf, NULL);
    }
    
    printf("Exiting on finish.\n");
    close(tap);
    close(packetSock);
-   close(rawSock);
    return 0;
 }
 
@@ -106,7 +139,42 @@ static void print_ip(const char* title, const uint8_t* addr) {
    printf(") ");
 }
 
-void ip_parse(const uint8_t* bytes, void* extra) {
+static void print_mac(const char* title, const uint8_t* mac) {
+   int i;
+   
+   printf("(%s", title);
+   for(i = 0; i < MAC_LEN; i++) {
+      printf("%02x", mac[i]);
+      if(i != (MAC_LEN - 1)) {
+         printf(":");
+      }
+   }
+   printf(") ");
+}
+
+static void eth_parse(const uint8_t* bytes, void* extra) {
+   struct eth_header header;
+
+   memcpy(&header, bytes, sizeof(struct eth_header));
+   header.type = ntohs(header.type);
+
+   printf("Ethernet Header 14 bytes: ");
+   print_mac("Dest MAC: ", header.destMAC);
+   print_mac("Source MAC: ", header.srcMAC);
+   
+   printf("(Type: ");
+   if(header.type == 0x806) {
+      printf("ARP)\n");
+      // arpParse(bytes + sizeof(ethHeader), NULL);
+   } else if(header.type == 0x800) {
+      printf("IP)\n");
+      ip_parse(bytes + sizeof(struct eth_header), NULL);
+   } else {
+      printf("Unknown %d)\n", header.type);
+   }
+}
+
+static void ip_parse(const uint8_t* bytes, void* extra) {
    struct ip_header header;
    uint32_t headerSize;
    
@@ -116,18 +184,21 @@ void ip_parse(const uint8_t* bytes, void* extra) {
    header.checksum  = ntohs(header.checksum);
    headerSize = ((long) sizeof(struct ip_header)) - ((header.verAndIHL & 0x0F) > 5 ? 0 : 4);
 
-   printf("IP Header: ");
+   printf("IP Header %d bytes: ", headerSize);
    printf("(TOS: 0x%x) ", header.TOS);
    printf("(TTL: %d) ", header.TTL);
-   printf("(Protocol: TCP) ");
-   printf("(Checksum: not calculated) ");
+   printf("(Protocol: %d) ", header.protocol);
+   // printf("(Checksum: not calculated) ");
    print_ip("Sender IP: ", header.srcIP);
    print_ip("Dest IP: ", header.destIP);
    printf("\n");
-   tcp_parse(bytes + headerSize, NULL);
+   if (header.protocol == 0x06) {
+      tcp_parse(bytes + headerSize, NULL);
+   }
 }
 
 static void tcp_parse(const uint8_t* bytes, void* extra) {
+   uint8_t headerSize;
    struct tcp_header header;
    
    memcpy(&header, bytes, sizeof(tcp_header));
@@ -139,7 +210,9 @@ static void tcp_parse(const uint8_t* bytes, void* extra) {
    header.checksum = ntohs(header.checksum);
    header.urgentPtr = ntohs(header.urgentPtr);
 
-   printf("TCP Header: ");
+   headerSize = (header.offset >> 4) * sizeof(uint32_t);
+
+   printf("TCP Header %d bytes: ", headerSize);
    printf("(Source Port: %05d) ", header.srcPort);
    printf("(Dest Port: %05d) ", header.destPort);
    printf("(Sequence Number: %010u) ", header.seqNum);
@@ -148,7 +221,7 @@ static void tcp_parse(const uint8_t* bytes, void* extra) {
    printf("(RST Flag: %s) ", ynBoolString(header.flags & 0x04));
    printf("(FIN Flag: %s) ", ynBoolString(header.flags & 0x01));
    printf("(Window Size: %d) ", header.windowSize);
-   printf("(Checksum: not calculated) ");
+   // printf("(Checksum: not calculated) ");
    printf("\n");
 }
 
@@ -156,7 +229,6 @@ static void clean_exit(int unused) {
    printf("Exiting on signal.\n");
    close(tap);
    close(packetSock);
-   close(rawSock);
    exit(EXIT_SUCCESS);
 }
 
