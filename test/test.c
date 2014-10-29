@@ -20,25 +20,26 @@
 So let's try to make this thing open tun right now
  */
 
-static int tunFd;
+static int tapFd;
 
 int main() {
    struct ifreq ifr;
-   int err;
+   int err, i, bytesRead;
+   uint8_t buf[BUF_SIZE];
 
    add_handler(SIGINT, clean_exit);
 
-   if ((tunFd = open("/dev/net/tun", O_RDWR)) == -1) {
+   if ((tapFd = open("/dev/net/tun", O_RDWR)) == -1) {
       perror("Failed to open tap device");
       abort();
    }
 
    memset(&ifr, 0, sizeof(struct ifreq));
-   ifr.ifr_flags = IFF_TUN;
+   ifr.ifr_flags = IFF_TAP;
    strncpy(ifr.ifr_name, "ip6e_test", IFNAMSIZ);
 
-   if ((err = ioctl(tunFd, TUNSETIFF, (void *) &ifr)) == -1) {
-      close(tunFd);
+   if ((err = ioctl(tapFd, TUNSETIFF, (void *) &ifr)) == -1) {
+      close(tapFd);
       perror("Failed to configure tap device");
       abort();
    }
@@ -46,7 +47,17 @@ int main() {
    printf("Opening tap device successful!\n");
 
    while (true) {
+      if ((bytesRead = read(tapFd, buf, BUF_SIZE)) == 0) {
+         perror("Error reading from tap device");
+         close(tapFd);
+         abort();
+      }
 
+      printf("%d bytes read, dumping...\n", bytesRead);
+      for (i = 0; i < BUF_SIZE; i++) {
+         printf("%02X ", buf[i]);
+      }
+      printf("\n");
    }
 
    return 0;
@@ -54,7 +65,7 @@ int main() {
 
 static void clean_exit(int unused) {
    printf("Exiting on signal.\n");
-   close(tunFd);
+   close(tapFd);
    exit(EXIT_SUCCESS);
 }
 
