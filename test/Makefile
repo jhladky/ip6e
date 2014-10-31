@@ -4,7 +4,10 @@ CC=gcc
 CFLAGS= -Wall -Wextra -Wno-unused-parameter -pedantic -std=c99 -D_POSIX_SOURCE
 # OBJS=l3.o
 
-ip6e_test: test.o
+test: test.o
+	$(CC) $(CFLAGS) -o $@ $<
+
+dll: dll.o
 	$(CC) $(CFLAGS) -o $@ $<
 
 %.o: %.c

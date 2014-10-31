@@ -7,7 +7,7 @@ struct ip_addr {
    uint8_t bytes[IP_ADDR_LEN];
 } ip_addr;
 
-void l3_rx(void * packet, int len);
-void l3_tx(void * data, int len, struct ip_addr addr);
+int l3_rx(void * packet, int len);
+int l3_tx(void * data, int len, struct ip_addr addr);
 
 #endif

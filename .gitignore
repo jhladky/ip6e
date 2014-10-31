@@ -6,5 +6,9 @@
 # C Object files
 *.o
 
+# Shared Libraries
+*.so
+   
 # Test binaries
 ip6e_test
+dll
