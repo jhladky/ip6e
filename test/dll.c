@@ -6,13 +6,13 @@
 
 int main() {
    int err;
-   const char * sterr;
+   // const char * sterr;
    void * handle;
    struct l3_funcs l3Funcs;
    struct ip_addr addr;
 
    // Modify this to RTLD_LAZY when we start using the testbench.
-   if ((handle = dlopen("libip6e.so", RTLD_NOW)) == NULL) {
+   if ((handle = dlopen("./libip6e.so", RTLD_NOW)) == NULL) {
       fprintf(stderr, "error opening library: %s\n", dlerror());
       abort();
    }
