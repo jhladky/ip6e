@@ -12,3 +12,5 @@
 # Test binaries
 ip6e_test
 dll
+echo_server
+echo_client
