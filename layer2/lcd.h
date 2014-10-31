@@ -1,5 +1,5 @@
-#ifndef __LCD_H__
-#define __LCD_H__
+#ifndef _LCD_H_
+#define _LCD_H_
 
 ///LCD interaction time constants///
 #define STARTUP_WAIT_INT 20 //ms
@@ -25,6 +25,6 @@
 
 ///prototypes///
 void lcd_init();
-void lcd_string(const char* str);
+void lcd_string(const char * str);
 
 #endif

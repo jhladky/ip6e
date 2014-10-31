@@ -12,7 +12,7 @@ int main() {
    struct ip_addr addr;
 
    // Modify this to RTLD_LAZY when we start using the testbench.
-   if ((handle = dlopen("../layer3/libip6e.so", RTLD_NOW)) == NULL) {
+   if ((handle = dlopen("libip6e.so", RTLD_NOW)) == NULL) {
       fprintf(stderr, "error opening library: %s\n", dlerror());
       abort();
    }

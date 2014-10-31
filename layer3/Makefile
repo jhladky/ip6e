@@ -15,6 +15,7 @@ endif
 l3_obj: l3.c
 	$(CC) $(CFLAGS) -fPIC -c $<
 	$(CC) $(CFLAGS) -shared -Wl,$(OSLDFLAGS),libip6e.so -o libip6e.so l3.o
+	cp libip6e.so ../test/
 
 l3: l3.o
 	$(CC) $(CFLAGS) -o $@ $<
