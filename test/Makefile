@@ -31,6 +31,7 @@ echo: echo_client echo_server
 
 all: test dll echo_client echo_server
 
+# Object file dependencies
 %.o: %.c
 	$(CC) $(CFLAGS) $(OSFLAGS) -c $< -o $@ $(LDFLAGS)
 

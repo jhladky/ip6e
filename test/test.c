@@ -76,6 +76,13 @@ int main() {
       abort();
    }
 
+   if ((err = system("/sbin/ip route add 10.200.200.0/24 via "
+                     "10.100.200.1")) == -1) {
+      close(tap);
+      perror("Tap network configuration failed");
+      abort();
+   }
+
    printDone();
    fprintf(stderr, "Open packet socket ");
 
@@ -140,7 +147,7 @@ static void eth_parse(const uint8_t* bytes, void* extra) {
    memcpy(&header, bytes, sizeof(struct eth_header));
    header.type = ntohs(header.type);
 
-   printf("Ethernet Header 14 bytes: ");
+   printf("Eth Header 0014 bytes: ");
    printf("(Dest MAC: %s) ", mac_to_string(header.destMAC));
    printf("(Source MAC: %s) ", mac_to_string(header.srcMAC));
    
@@ -172,7 +179,7 @@ static void ip_parse(const uint8_t* bytes, void* extra) {
    } else {
       printf("<-- ");
    }
-   printf("IP Header %d bytes: ", headerSize);
+   printf("IP4 Header %04d bytes: ", headerSize);
    printf("(TOS: 0x%x) ", header.TOS);
    printf("(TTL: %d) ", header.TTL);
    printf("(Protocol: %d) ", header.protocol);
@@ -200,7 +207,7 @@ static void tcp_parse(const uint8_t* bytes, void* extra) {
 
    headerSize = (header.offset >> 4) * sizeof(uint32_t);
 
-   printf("TCP Header %d bytes: ", headerSize);
+   printf("TCP Header %04d bytes: ", headerSize);
    printf("(Source Port: %05d) ", header.srcPort);
    printf("(Dest Port: %05d) ", header.destPort);
    printf("(Sequence Number: %010u) ", header.seqNum);
