@@ -11,8 +11,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <netdb.h>
-#include <net/if.h>
 #include <linux/if.h>
+#include <net/if.h>
 #include <linux/if_tun.h>
 #include <linux/if_packet.h>
 #include <arpa/inet.h>

@@ -4,14 +4,15 @@ OS = $(shell uname -s)
 
 # test dir vars
 CC=gcc
-CFLAGS= -Wall -Wextra -Wno-unused-parameter -pedantic -std=c99 -D_POSIX_SOURCE
+# CFLAGS= -Wall -Wextra -Wno-unused-parameter -pedantic -std=c99 -D_POSIX_SOURCE
+CFLAGS= -Wall -Wextra -Wno-unused-parameter -std=c99 -D_POSIX_SOURCE
 LDFLAGS=-ldl
 
 ifeq ("$(OS)", "Darwin")
    OSFLAGS=-DDARWIN -D_BSD_SOURCE
 	OSLDFLAGS=-install_name
 else
-   OSFLAGS=-DLINUX
+   OSFLAGS=-DLINUX -D_GNU_SOURCE
 	OSLDFLAGS=-soname
 endif
 
@@ -20,6 +21,9 @@ test: test/test.o
 
 dll: test/dll.o
 	$(CC) $(CFLAGS) $(OSFLAGS) -o $@ $< $(LDFLAGS)
+
+preload: test/preload.c
+	$(CC) $(CFLAGS) $(OSFLAGS) -o libpreload.so $< -fPIC -shared $(LDFLAGS)
 
 echo_client: test/echo_client.o
 	$(CC) $(CFLAGS) $(OSFLAGS) -o $@ $<
