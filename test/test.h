@@ -4,13 +4,15 @@
 #define BUF_SIZE 2048
 #define IP_LEN 4
 #define MAC_LEN 6
+#define MAC_STR_LEN 18
+#define IP_STR_LEN 16
 #define ynBoolString(b) ((b) ? "yes" : " no")
 #define printDone() fprintf(stderr, "[X]\n")
 
 static void clean_exit(int unused);
 static void add_handler(int signal, void (*handlerFunc)(int));
-static void print_ip(const char* title, const uint8_t* addr);
-static void print_mac(const char* title, const uint8_t* mac);
+static char* ip_to_string(const uint8_t* addr);
+static char* mac_to_string(const uint8_t* addr);
 static void tcp_parse(const uint8_t* bytes, void* extra);
 static void ip_parse(const uint8_t* bytes, void* extra);
 static void eth_parse(const uint8_t* bytes, void* extra);

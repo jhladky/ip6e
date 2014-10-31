@@ -27,7 +27,6 @@ static int tap, packetSock;
 int main() {
    const char* tapName = "ip6e";
    struct ifreq ifr;
-   //struct sockaddr_in* tapAddr = (struct sockaddr_in *) &ifr.ifr_addr;
    struct sockaddr_ll sa;
    int err, bytesRead, ifNdx;
    uint8_t buf[BUF_SIZE];
@@ -91,7 +90,9 @@ int main() {
    sa.sll_ifindex = if_nametoindex("ip6e");
    packetSock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
    
-   if ((err = bind(packetSock, (struct sockaddr *) &sa, sizeof(struct sockaddr_ll))) < 0) {
+   if ((err = bind(packetSock,
+                   (struct sockaddr *) &sa,
+                   sizeof(struct sockaddr_ll))) < 0) {
       close(tap);
       close(packetSock);
       perror("Bind to tap interface failed");
@@ -102,15 +103,6 @@ int main() {
    printf("Ready.\n");
 
    while (true) {
-
-      /*if ((bytesRead = read(tap, buf, BUF_SIZE)) < 0) {
-        perror("Error reading from tap device");
-        close(tap);
-        abort();
-        }
-
-        printf("Read %d bytes from ip6e\n", bytesRead); */
-      
       if ((bytesRead = read(packetSock, buf, BUF_SIZE)) < 0) {
          perror("Error reading from socket");
          close(packetSock);
@@ -126,30 +118,20 @@ int main() {
    return 0;
 }
 
-static void print_ip(const char* title, const uint8_t* addr) {
-   int i;
-   
-   printf("(%s", title);
-   for(i = 0; i < IP_LEN; i++) {
-      printf("%03d", addr[i]);
-      if(i != (IP_LEN - 1)) {
-         printf(".");
-      }
-   }
-   printf(") ");
+static char* ip_to_string(const uint8_t* addr) {
+   static char str[IP_STR_LEN];
+      
+   snprintf(str, IP_STR_LEN, "%03d.%03d.%03d.%03d",
+            addr[0], addr[1], addr[2], addr[3]);
+   return str;
 }
 
-static void print_mac(const char* title, const uint8_t* mac) {
-   int i;
-   
-   printf("(%s", title);
-   for(i = 0; i < MAC_LEN; i++) {
-      printf("%02x", mac[i]);
-      if(i != (MAC_LEN - 1)) {
-         printf(":");
-      }
-   }
-   printf(") ");
+static char* mac_to_string(const uint8_t* addr) {
+   static char str[MAC_STR_LEN];
+
+   snprintf(str, MAC_STR_LEN, "%02X:%02X:%02X:%02X:%02X:%02X",
+            addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+   return str;
 }
 
 static void eth_parse(const uint8_t* bytes, void* extra) {
@@ -159,8 +141,8 @@ static void eth_parse(const uint8_t* bytes, void* extra) {
    header.type = ntohs(header.type);
 
    printf("Ethernet Header 14 bytes: ");
-   print_mac("Dest MAC: ", header.destMAC);
-   print_mac("Source MAC: ", header.srcMAC);
+   printf("(Dest MAC: %s) ", mac_to_string(header.destMAC));
+   printf("(Source MAC: %s) ", mac_to_string(header.srcMAC));
    
    printf("(Type: ");
    if(header.type == 0x806) {
@@ -182,15 +164,21 @@ static void ip_parse(const uint8_t* bytes, void* extra) {
    header.totalLen = ntohs(header.totalLen);
    header.id  = ntohs(header.id);
    header.checksum  = ntohs(header.checksum);
-   headerSize = ((long) sizeof(struct ip_header)) - ((header.verAndIHL & 0x0F) > 5 ? 0 : 4);
+   headerSize = ((long) sizeof(struct ip_header)) -
+      ((header.verAndIHL & 0x0F) > 5 ? 0 : 4);
 
+   if (strcmp("010.100.200.001", ip_to_string(header.srcIP)) == 0) {
+      printf("--> ");
+   } else {
+      printf("<-- ");
+   }
    printf("IP Header %d bytes: ", headerSize);
    printf("(TOS: 0x%x) ", header.TOS);
    printf("(TTL: %d) ", header.TTL);
    printf("(Protocol: %d) ", header.protocol);
    // printf("(Checksum: not calculated) ");
-   print_ip("Sender IP: ", header.srcIP);
-   print_ip("Dest IP: ", header.destIP);
+   printf("(Sender IP: %s) ", ip_to_string(header.srcIP));
+   printf("(Dest IP: %s) ", ip_to_string(header.destIP));
    printf("\n");
    if (header.protocol == 0x06) {
       tcp_parse(bytes + headerSize, NULL);
