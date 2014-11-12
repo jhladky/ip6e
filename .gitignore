@@ -2,9 +2,19 @@
 *.elf
 *.hex
 
-
 # C Object files
 *.o
+
+# Kernel Object files
+*.ko
+*.mod.c
+*.mod.o
+*.ko.cmd
+*.mod.o.cmd
+*.o.cmd
+.tmp_versions
+*.symvers
+*.order
 
 # Shared Libraries
 *.so
