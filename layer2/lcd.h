@@ -1,5 +1,5 @@
-#ifndef _LCD_H_
-#define _LCD_H_
+#ifndef LCD_H
+#define LCD_H
 
 ///LCD interaction time constants///
 #define STARTUP_WAIT_INT 20 //ms

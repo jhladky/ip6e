@@ -8,16 +8,19 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+// #include <linux/if.h>
+#include <linux/if_tun.h>
+#include <linux/if_packet.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <netdb.h>
-#include <linux/if.h>
 #include <net/if.h>
-#include <linux/if_tun.h>
-#include <linux/if_packet.h>
 #include <arpa/inet.h>
 
 #include "test.h"
+
+//WORKS, HORRIBLE
+//extern unsigned int if_nametoindex(const char*);
 
 /* 
  * We need these as global so we can close them properly when we terminate.
